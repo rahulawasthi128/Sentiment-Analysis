@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentiment Analysis App</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Chart.js CDN -->
+    <style>
+        body {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            color: #333;
+            font-family: 'Poppins', sans-serif;
+            height: 100vh;
+            margin: 0;
+            overflow-y: auto;
+            padding: 20px;
+            animation: fadeInBg 1.5s ease-in;
+        }
+    
+        h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 40px;
+            color: #333;
+            animation: bounceIn 1s ease-out;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.7);
+        }
+    
+        .card {
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            margin: 0 auto;
+            max-width: 600px;
+            animation: slideUp 0.6s ease-out;
+        }
+    
+        .form-label {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 10px;
+        }
+    
+        textarea, select {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            border-radius: 10px;
+            border: 2px solid #6dd5ed;
+            transition: border-color 0.3s;
+            margin-bottom: 20px;
+        }
+    
+        textarea:focus, select:focus {
+            border-color: #2193b0;
+            outline: none;
+        }
+    
+        .btn-primary {
+            background: linear-gradient(90deg, #6dd5ed, #2193b0);
+            border: none;
+            font-size: 1.2rem;
+            padding: 12px;
+            width: 100%;
+            border-radius: 30px;
+            transition: transform 0.3s, background 0.3s;
+            color: white;
+            cursor: pointer;
+        }
+    
+        .btn-primary:hover {
+            background: linear-gradient(90deg, #2193b0, #6dd5ed);
+            transform: scale(1.05);
+        }
+    
+        .loader {
+            border: 5px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 5px solid #6dd5ed;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+    
+        #results {
+            display: none;
+            padding: 20px;
+            text-align: center;
+            animation: fadeIn 1s ease-in;
+        }
+    
+        #polarity {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #6dd5ed;
+            margin-bottom: 20px;
+        }
+    
+        canvas {
+            max-width: 100%;
+            margin: 20px auto;
+            display: block;
+        }
+    
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    
+        @keyframes bounceIn {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-30px); }
+            60% { transform: translateY(-15px); }
+        }
+    
+        @keyframes fadeInBg {
+            from { background-color: #89f7fe; }
+            to { background-color: #84fab0; }
+        }
+    
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Sentiment Analysis App</h1>
+    <div class="card">
+        <form id="sentiment-form">
+            <label for="text-input" class="form-label">Enter Text:</label>
+            <textarea id="text-input" rows="5" placeholder="Type your text here..."></textarea>
+
+            <label for="language" class="form-label">Select Language:</label>
+            <select id="language">
+                <option value="en" selected>English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+            </select>
+
+            <button type="button" class="btn-primary" id="analyze-btn">Analyze</button>
+        </form>
+        <div class="loader" id="loader"></div>
+        <div id="results">
+            <p id="polarity"></p>
+            <canvas id="sentiment-chart"></canvas> <!-- Pie chart will be rendered here -->
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('analyze-btn').addEventListener('click', async () => {
+            const text = document.getElementById('text-input').value;
+            const language = document.getElementById('language').value;
+
+            if (!text.trim()) {
+                alert("Please enter text for analysis!");
+                return;
+            }
+
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, language }),
+            });
+
+            const data = await response.json();
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+
+            document.getElementById('polarity').textContent = `Polarity: ${data.polarity.toFixed(2)} (${data.sentiment_text})`;
+
+            // Create the Pie Chart based on sentiment polarity
+            const ctx = document.getElementById('sentiment-chart').getContext('2d');
+            const sentimentScore = data.polarity;
+            const chartData = {
+                labels: ['Positive', 'Negative', 'Neutral'],
+                datasets: [{
+                    data: [
+                        sentimentScore > 0 ? sentimentScore : 0,
+                        sentimentScore < 0 ? -sentimentScore : 0,
+                        sentimentScore === 0 ? 1 : 0,
+                    ],
+                    backgroundColor: ['#6dd5ed', '#ff6b6b', '#f1c40f'],
+                    borderColor: ['#2193b0', '#e74c3c', '#f39c12'],
+                    borderWidth: 1
+                }]
+            };
+
+            // Create the Pie chart
+            new Chart(ctx, {
+                type: 'pie',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    const label = tooltipItem.label;
+                                    const value = tooltipItem.raw.toFixed(2);
+                                    return `${label}: ${value}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
