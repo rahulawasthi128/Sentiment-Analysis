@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template,send_file
+from flask import Flask, request, jsonify, render_template
 from textblob import TextBlob
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from googletrans import Translator
@@ -14,7 +14,7 @@ VADER_NEG_THRESHOLD = -0.05
 
 @app.route('/')
 def index():
-    return send_file('index.html')
+    return render_template('index.html')
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
